@@ -1,0 +1,37 @@
+---
+// Bordered container + 3-col grid of WorkCards (per Home styleframe).
+import WorkCard from './WorkCard.astro';
+
+interface Props {
+  items: { slug: string; title: string; thumbnail: { url: string; alt: string } }[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="work-grid">
+  {items.map(item => <WorkCard {...item} />)}
+</div>
+
+<style>
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gap-md);
+    padding: var(--gap-md);
+    border: 1px solid var(--border);
+  }
+
+  @media (max-width: 900px) {
+    .work-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .work-grid {
+      grid-template-columns: 1fr;
+      padding: var(--gap-sm);
+    }
+  }
+</style>

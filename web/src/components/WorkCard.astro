@@ -1,0 +1,36 @@
+---
+// Square thumbnail linking to /work/[slug]. The styleframe shows no text on
+// the card.
+interface Props {
+  slug: string;
+  title: string;
+  thumbnail: { url: string; alt: string };
+}
+
+const { slug, title, thumbnail } = Astro.props;
+---
+
+<a class="work-card" href={`/work/${slug}`} aria-label={title}>
+  <img src={thumbnail.url} alt={thumbnail.alt} width="600" height="600" loading="lazy" />
+</a>
+
+<style>
+  .work-card {
+    display: block;
+    aspect-ratio: 1;
+    background: #5e5e5e;
+    outline-offset: 4px;
+  }
+
+  .work-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.15s ease;
+  }
+
+  .work-card:hover img,
+  .work-card:focus-visible img {
+    opacity: 0.75;
+  }
+</style>

@@ -1,0 +1,21 @@
+---
+// Outlined chips used for the Stack list on the Work Item page.
+interface Props {
+  tags: string[];
+}
+
+const { tags } = Astro.props;
+---
+
+<ul class="tag-list" role="list">
+  {tags.map(tag => <li class="tag">{tag}</li>)}
+</ul>
+
+<style>
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-xs);
+    list-style: none;
+  }
+</style>

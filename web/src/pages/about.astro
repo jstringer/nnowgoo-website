@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// TODO (Jack): replace the bio placeholder and the placeholder contact links.
+const links = [
+  { href: 'https://github.com/', label: 'GitHub' },
+  { href: 'https://www.linkedin.com/', label: 'LinkedIn' },
+  { href: 'mailto:hello@example.com', label: 'Email' },
+];
+---
+
+<BaseLayout title="About">
+  <a href="/" class="back">&lt; back</a>
+
+  <h1 class="section-label">About</h1>
+
+  <p class="bio">
+    Creative Technologist, Software Engineer, and Technical Director for live
+    events and interactive &amp; immersive entertainment. (Bio placeholder:
+    replace with your own copy.)
+  </p>
+
+  <ul class="links" role="list">
+    {links.map(link => (
+      <li><a href={link.href}>{link.label}</a></li>
+    ))}
+  </ul>
+</BaseLayout>
+
+<style>
+  .back {
+    display: inline-block;
+    margin-bottom: var(--gap-lg);
+  }
+
+  .bio {
+    margin-top: var(--gap-md);
+    max-width: 60ch;
+  }
+
+  .links {
+    display: flex;
+    gap: var(--gap-md);
+    margin-top: var(--gap-md);
+    list-style: none;
+  }
+</style>

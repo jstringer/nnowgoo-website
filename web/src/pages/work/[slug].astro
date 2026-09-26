@@ -1,0 +1,144 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagList from '../../components/TagList.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('work');
+  return entries.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+
+// Old schema has only a year. Phase 3 adds a real date; format it there as
+// Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).
+const dateLabel = String(data.year);
+
+// The first image is used as the Home thumbnail, so the gallery is everything after it.
+const thumbIndex = data.media.findIndex(m => m.type === 'image');
+const gallery = data.media.filter((_, i) => i !== thumbIndex);
+const lastIsOdd = gallery.length % 2 === 1;
+---
+
+<BaseLayout title={data.title} description={data.summary}>
+  <a href="/" class="back">&lt; back</a>
+
+  <header class="head">
+    <div>
+      <h1 class="title">{data.title}</h1>
+      <p class="client muted">{data.client}</p>
+    </div>
+    <p class="date muted">{dateLabel}</p>
+  </header>
+
+  <div class="meta">
+    <section>
+      <h2 class="label">Overview</h2>
+      <p>{data.summary}</p>
+    </section>
+    <section>
+      <h2 class="label">Stack</h2>
+      <TagList tags={data.tags} />
+    </section>
+  </div>
+
+  <div class="gallery">
+    {gallery.map((item, i) => {
+      const full = lastIsOdd && i === gallery.length - 1;
+      return (
+        <div class:list={['gallery__item', { full }]}>
+          {item.type === 'image' ? (
+            <img src={item.src} alt={item.alt ?? data.title} loading="lazy" />
+          ) : item.type === 'video' ? (
+            <video src={item.src} poster={item.poster} controls muted loop playsinline />
+          ) : null}
+        </div>
+      );
+    })}
+  </div>
+</BaseLayout>
+
+<style>
+  .back {
+    display: inline-block;
+    margin-bottom: var(--gap-lg);
+  }
+
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--gap-md);
+  }
+
+  .title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 400;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  .client {
+    font-size: 1.25rem;
+    text-transform: uppercase;
+  }
+
+  .date {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-lg);
+    margin: var(--gap-lg) 0;
+  }
+
+  .label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .meta p {
+    font-size: 0.875rem;
+    max-width: 60ch;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--grid-gap);
+  }
+
+  .gallery__item {
+    background: #5e5e5e;
+  }
+
+  .gallery__item.full {
+    grid-column: 1 / -1;
+  }
+
+  .gallery__item img,
+  .gallery__item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 720px) {
+    .meta,
+    .gallery {
+      grid-template-columns: 1fr;
+    }
+
+    .gallery__item.full {
+      grid-column: auto;
+    }
+  }
+</style>

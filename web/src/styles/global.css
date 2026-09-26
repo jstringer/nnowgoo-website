@@ -1,0 +1,92 @@
+/*
+  Global styles: single source of truth for the design system.
+  Aesthetic (from styleframes): pure black, monospace everywhere, left-aligned
+  content column, white underlined links, 1px borders.
+*/
+
+:root {
+  --bg: #000;
+  --text: #fff;
+  --text-muted: #9a9a9a;
+  --border: #666;
+
+  --font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --max-width: 1200px;
+  --gutter: clamp(1.25rem, 7vw, 6.6rem);
+
+  --gap-xs: 0.5rem;
+  --gap-sm: 1rem;
+  --gap-md: 2rem;
+  --gap-lg: 4rem;
+  --gap-xl: 6rem;
+  --grid-gap: 1.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+img,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+main {
+  max-width: var(--max-width);
+  padding: var(--gap-lg) var(--gutter) var(--gap-xl);
+}
+
+.container {
+  max-width: var(--max-width);
+  padding-inline: var(--gutter);
+}
+
+.section-label {
+  font-size: 1.5rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid var(--text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.5;
+  background: none;
+}
+
+.muted {
+  color: var(--text-muted);
+}
