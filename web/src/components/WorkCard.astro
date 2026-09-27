@@ -1,6 +1,8 @@
 ---
 // Square thumbnail linking to /work/[slug]. The styleframe shows no text on
 // the card.
+import { Image } from 'astro:assets';
+
 interface Props {
   slug: string;
   title: string;
@@ -11,7 +13,7 @@ const { slug, title, thumbnail } = Astro.props;
 ---
 
 <a class="work-card" href={`/work/${slug}`} aria-label={title}>
-  <img src={thumbnail.url} alt={thumbnail.alt} width="600" height="600" loading="lazy" />
+  <Image src={thumbnail.url} alt={thumbnail.alt} width={600} height={600} loading="lazy" />
 </a>
 
 <style>

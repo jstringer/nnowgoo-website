@@ -2,22 +2,13 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import WorkGrid from '../components/WorkGrid.astro';
-import { getCollection } from 'astro:content';
+import { getAllWork, mediaUrl } from '../lib/payload';
 
-// Single mapping point: Phase 3 replaces this with the Payload fetch.
-// The collection still uses the old schema, so the thumbnail is the first
-// image in `media`.
-const entries = (await getCollection('work')).sort((a, b) => b.data.year - a.data.year);
-
-const items = entries.flatMap(entry => {
-  const image = entry.data.media.find(m => m.type === 'image');
-  if (!image) return [];
-  return [{
-    slug: entry.id,
-    title: entry.data.title,
-    thumbnail: { url: image.src, alt: image.alt ?? entry.data.title },
-  }];
-});
+const items = (await getAllWork()).map(work => ({
+  slug: work.slug,
+  title: work.title,
+  thumbnail: { url: mediaUrl(work.thumbnail), alt: work.thumbnail.alt },
+}));
 ---
 
 <BaseLayout title="Home">

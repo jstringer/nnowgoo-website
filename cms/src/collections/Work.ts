@@ -1,4 +1,35 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, CollectionConfig } from 'payload'
+
+const slugify = (input: string): string =>
+  input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+// Ask Vercel to rebuild the static Astro site. A failed call must never block
+// saving in the admin, so errors are logged and swallowed.
+const triggerRebuild = async (req: { payload: { logger: { error: (msg: string) => void } } }) => {
+  const url = process.env.WEB_DEPLOY_HOOK_URL
+  if (!url) return
+  try {
+    const res = await fetch(url, { method: 'POST' })
+    if (!res.ok) req.payload.logger.error(`Deploy hook responded ${res.status}`)
+  } catch (err) {
+    req.payload.logger.error(`Deploy hook failed: ${String(err)}`)
+  }
+}
+
+// Only published content is visible on the site, so only rebuild for it.
+const rebuildOnPublish: CollectionAfterChangeHook = async ({ doc, req }) => {
+  if (doc._status === 'published') await triggerRebuild(req)
+  return doc
+}
+
+const rebuildOnDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  if (doc._status === 'published') await triggerRebuild(req)
+  return doc
+}
 
 export const Work: CollectionConfig = {
   slug: 'work',
@@ -12,33 +43,79 @@ export const Work: CollectionConfig = {
     drafts: true,
   },
   access: {
-    // TODO: public can read published docs only; writes require a logged-in user.
-    //   read: ({ req }) => (req.user ? true : { _status: { equals: 'published' } }),
-    read: () => true,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
+    read: ({ req }) => (req.user ? true : { _status: { equals: 'published' } }),
   },
   defaultSort: '-date',
   fields: [
-    // TODO title: text, required
-    // TODO slug: text, required, unique, indexed. Auto-generate from title in a
-    //   beforeValidate field hook (lowercase, hyphenated); sidebar position
-    // TODO client: text, required
-    // TODO date: date, required; admin.date.pickerAppearance = 'monthOnly'
-    //   (site shows "September 2025")
-    // TODO overview: textarea, required
-    // TODO stack: array of { name: text }, rendered as tag chips
-    // TODO thumbnail: upload -> 'media', required (square card on Home)
-    // TODO gallery: array of { image: upload -> 'media' (required) }.
-    //   The site puts them 2-up and lets a lone last item span the full width,
-    //   so no per-item layout field is needed.
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'URL segment, auto-generated from the title if left blank.',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            const source = typeof value === 'string' && value ? value : data?.title
+            return typeof source === 'string' ? slugify(source) : value
+          },
+        ],
+      },
+    },
+    {
+      name: 'client',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'date',
+      type: 'date',
+      required: true,
+      admin: {
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'monthOnly',
+          displayFormat: 'MMMM yyyy',
+        },
+      },
+    },
+    {
+      name: 'overview',
+      type: 'textarea',
+      required: true,
+    },
+    {
+      name: 'stack',
+      type: 'array',
+      labels: { singular: 'Tool', plural: 'Stack' },
+      fields: [{ name: 'name', type: 'text', required: true }],
+    },
+    {
+      name: 'thumbnail',
+      type: 'upload',
+      relationTo: 'media',
+      required: true,
+    },
+    {
+      name: 'gallery',
+      type: 'array',
+      fields: [{ name: 'image', type: 'upload', relationTo: 'media', required: true }],
+    },
   ],
   hooks: {
-    afterChange: [
-      // TODO: trigger the Vercel Deploy Hook for the web project so the static
-      //   site rebuilds on publish. POST to process.env.WEB_DEPLOY_HOOK_URL,
-      //   only when doc._status === 'published' (or when unpublishing).
-    ],
-    afterDelete: [
-      // TODO: same deploy hook call
-    ],
+    afterChange: [rebuildOnPublish],
+    afterDelete: [rebuildOnDelete],
   },
 }

@@ -1,36 +1,38 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagList from '../../components/TagList.astro';
-import { getCollection } from 'astro:content';
+import { getAllWork, mediaUrl, type Work } from '../../lib/payload';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('work');
-  return entries.map(entry => ({
-    params: { slug: entry.id },
-    props: { entry },
+  const all = await getAllWork();
+  return all.map(work => ({
+    params: { slug: work.slug },
+    props: { work },
   }));
 }
 
-const { entry } = Astro.props;
-const { data } = entry;
+const { work } = Astro.props as { work: Work };
 
-// Old schema has only a year. Phase 3 adds a real date; format it there as
-// Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).
-const dateLabel = String(data.year);
+// Stored as a full ISO date; the CMS only picks a month, so format in UTC.
+const dateLabel = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(new Date(work.date));
 
-// The first image is used as the Home thumbnail, so the gallery is everything after it.
-const thumbIndex = data.media.findIndex(m => m.type === 'image');
-const gallery = data.media.filter((_, i) => i !== thumbIndex);
+const tags = (work.stack ?? []).map(t => t.name);
+const gallery = (work.gallery ?? []).map(g => g.image);
 const lastIsOdd = gallery.length % 2 === 1;
 ---
 
-<BaseLayout title={data.title} description={data.summary}>
+<BaseLayout title={work.title} description={work.overview}>
   <a href="/" class="back">&lt; back</a>
 
   <header class="head">
     <div>
-      <h1 class="title">{data.title}</h1>
-      <p class="client muted">{data.client}</p>
+      <h1 class="title">{work.title}</h1>
+      <p class="client muted">{work.client}</p>
     </div>
     <p class="date muted">{dateLabel}</p>
   </header>
@@ -38,11 +40,11 @@ const lastIsOdd = gallery.length % 2 === 1;
   <div class="meta">
     <section>
       <h2 class="label">Overview</h2>
-      <p>{data.summary}</p>
+      <p>{work.overview}</p>
     </section>
     <section>
       <h2 class="label">Stack</h2>
-      <TagList tags={data.tags} />
+      <TagList tags={tags} />
     </section>
   </div>
 
@@ -51,11 +53,14 @@ const lastIsOdd = gallery.length % 2 === 1;
       const full = lastIsOdd && i === gallery.length - 1;
       return (
         <div class:list={['gallery__item', { full }]}>
-          {item.type === 'image' ? (
-            <img src={item.src} alt={item.alt ?? data.title} loading="lazy" />
-          ) : item.type === 'video' ? (
-            <video src={item.src} poster={item.poster} controls muted loop playsinline />
-          ) : null}
+          <Image
+            src={mediaUrl(item)}
+            alt={item.alt}
+            inferSize
+            widths={[400, 800, 1200, 1600]}
+            sizes="(min-width: 720px) 50vw, 100vw"
+            loading="lazy"
+          />
         </div>
       );
     })}
@@ -124,8 +129,7 @@ const lastIsOdd = gallery.length % 2 === 1;
     grid-column: 1 / -1;
   }
 
-  .gallery__item img,
-  .gallery__item video {
+  .gallery__item img {
     width: 100%;
     height: 100%;
     object-fit: cover;

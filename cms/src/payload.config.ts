@@ -7,9 +7,27 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Work } from './collections/Work'
+import { s3Storage } from '@payloadcms/storage-s3'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+// Each Neon branch has its own storage endpoint, so the dev and production
+// databases automatically get separate files.
+const neonEndpoint = process.env.AWS_ENDPOINT_URL_S3?.replace(/\/$/, '')
+const neonBucket = process.env.S3_BUCKET
+
+// Once `csrf` is set, cookie auth is only accepted from listed origins, so this
+// must include the CMS's own origin (the admin UI) as well as the Astro site.
+const allowedOrigins = [
+  process.env.WEB_URL,
+  process.env.CMS_URL,
+  'http://localhost:4321',
+  'http://localhost:3000',
+].filter(
+  (origin): origin is string => Boolean(origin),
+)
 
 export default buildConfig({
   admin: {
@@ -18,22 +36,49 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  // TODO: add Work here after importing it from './collections/Work'
-  // TODO: cors + csrf: [process.env.WEB_URL, 'http://localhost:4321'] so the Astro site can call the API
-  // TODO: plugins: vercelBlobStorage({ collections: { media: true }, token: process.env.BLOB_READ_WRITE_TOKEN })
-  //   (@payloadcms/storage-vercel-blob), enabled only when the token is set so local dev uses disk
-  // TODO: db: add `push: false` + a prodMigrations setup for production (`payload migrate`)
-  collections: [Users, Media],
+  collections: [Users, Media, Work],
+  // Let the Astro site (local + deployed) call the API.
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
+  // Dev pushes schema changes automatically. Production doesn't: create
+  // migrations locally (`npm run payload migrate:create`) and run
+  // `npm run payload migrate` as part of the production build.
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    // Neon Object Storage (S3-compatible). Enabled only when configured, so
+    // local dev can fall back to disk (cms/media/) by leaving the vars empty.
+    s3Storage({
+      enabled: Boolean(neonEndpoint && neonBucket),
+      bucket: neonBucket || '',
+      collections: {
+        media: {
+          disablePayloadAccessControl: true,
+          // Bucket is public_read: point media URLs straight at it instead of
+          // proxying through Payload. Path-style URL, per Neon's docs.
+          generateFileURL: ({ filename, prefix }) =>
+            [neonEndpoint, neonBucket, prefix, filename].filter(Boolean).join('/'),
+        },
+      },
+      config: {
+        region: process.env.AWS_REGION,
+        endpoint: neonEndpoint,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        },
+        forcePathStyle: true, // required by Neon
+        requestChecksumCalculation: 'WHEN_REQUIRED', // avoids rejected uploads
+      },
+    }),
+  ],
 })

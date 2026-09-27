@@ -12,9 +12,10 @@ export const Media: CollectionConfig = {
       required: true,
     },
   ],
-  // TODO: images only (mimeTypes: ['image/*']); add imageSizes:
-  //   { name: 'thumbnail', width: 600, height: 600, position: 'centre' } and
-  //   { name: 'large', width: 1600 }. Storage moves to Vercel Blob via the
-  //   storage plugin in payload.config.ts, since Vercel's disk is read-only.
-  upload: true,
+  // Storage moves to Neon Object Storage via the plugin in payload.config.ts.
+  // Resizing happens on the frontend (astro:assets) at build time instead of
+  // here, so only the original upload is stored.
+  upload: {
+    mimeTypes: ['image/*'],
+  },
 }
