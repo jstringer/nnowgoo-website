@@ -12,8 +12,8 @@
 
   --font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
-  --max-width: 1200px;
-  --gutter: clamp(1.25rem, 7vw, 6.6rem);
+  --max-width: 1500px;
+  --gutter: clamp(1.25rem, 2vw, 8.6rem);
 
   --gap-xs: 0.5rem;
   --gap-sm: 1rem;
@@ -40,6 +40,13 @@ body {
   line-height: 1.5;
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* centers main; nudge with align-items or margin-left on main below */
+}
+
 h1,
 h2,
 h3,
@@ -61,6 +68,7 @@ a {
 }
 
 main {
+  width: 100%;
   max-width: var(--max-width);
   padding: var(--gap-lg) var(--gutter) var(--gap-xl);
 }

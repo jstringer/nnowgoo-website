@@ -151,6 +151,9 @@ export interface User {
  */
 export interface Media {
   id: number;
+  /**
+   * Defaults to the filename if left blank; edit for a real description.
+   */
   alt: string;
   _objectKey?: string | null;
   updatedAt: string;
