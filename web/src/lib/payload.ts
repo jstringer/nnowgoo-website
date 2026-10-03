@@ -9,6 +9,11 @@ export interface Media {
   id: string | number;
   url?: string | null;
   alt: string;
+  mimeType?: string | null;
+}
+
+export function isVideo(media: Media): boolean {
+  return Boolean(media.mimeType?.startsWith('video/'));
 }
 
 export interface Work {

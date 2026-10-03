@@ -29,8 +29,10 @@ export const Media: CollectionConfig = {
   ],
   // Storage moves to Neon Object Storage via the plugin in payload.config.ts.
   // Resizing happens on the frontend (astro:assets) at build time instead of
-  // here, so only the original upload is stored.
+  // here, so only the original upload is stored. Videos are stored as-is and
+  // played straight from storage (web/ never processes them); keep them to
+  // web-friendly H.264 mp4 or webm.
   upload: {
-    mimeTypes: ['image/*'],
+    mimeTypes: ['image/*', 'video/mp4', 'video/webm'],
   },
 }

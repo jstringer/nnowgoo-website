@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagList from '../../components/TagList.astro';
-import { getAllWork, mediaUrl, type Work } from '../../lib/payload';
+import { getAllWork, isVideo, mediaUrl, type Work } from '../../lib/payload';
 
 export async function getStaticPaths() {
   const all = await getAllWork();
@@ -53,14 +53,24 @@ const lastIsOdd = gallery.length % 2 === 1;
       const full = lastIsOdd && i === gallery.length - 1;
       return (
         <div class:list={['gallery__item', { full }]}>
-          <Image
-            src={mediaUrl(item)}
-            alt={item.alt}
-            inferSize
-            widths={[400, 800, 1200, 1600]}
-            sizes="(min-width: 720px) 50vw, 100vw"
-            loading="lazy"
-          />
+          {isVideo(item) ? (
+            <video
+              src={`${mediaUrl(item)}#t=0.001`}
+              aria-label={item.alt}
+              controls
+              playsinline
+              preload="metadata"
+            />
+          ) : (
+            <Image
+              src={mediaUrl(item)}
+              alt={item.alt}
+              inferSize
+              widths={[400, 800, 1200, 1600]}
+              sizes="(min-width: 720px) 50vw, 100vw"
+              loading="lazy"
+            />
+          )}
         </div>
       );
     })}
@@ -133,6 +143,16 @@ const lastIsOdd = gallery.length % 2 === 1;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* Letterbox instead of cropping so portrait and landscape clips stay whole
+     and the controls are never cut off. */
+  .gallery__item video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--bg);
   }
 
   @media (max-width: 720px) {

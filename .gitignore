@@ -33,3 +33,7 @@ CLAUDE.md
 # payload / next
 .next/
 cms/media/
+
+# original and resized content
+photo/
+photo-web/

@@ -189,6 +189,9 @@ export interface Work {
       }[]
     | null;
   thumbnail: number | Media;
+  /**
+   * Images or videos. Videos play inline with controls.
+   */
   gallery?:
     | {
         image: number | Media;

@@ -107,10 +107,16 @@ export const Work: CollectionConfig = {
       type: 'upload',
       relationTo: 'media',
       required: true,
+      // The site renders thumbnails with <Image>, so videos aren't allowed here.
+      filterOptions: { mimeType: { contains: 'image/' } },
     },
     {
       name: 'gallery',
       type: 'array',
+      admin: {
+        description: 'Images or videos. Videos play inline with controls.',
+      },
+      // `image` holds either kind of media (name kept to avoid a DB migration).
       fields: [{ name: 'image', type: 'upload', relationTo: 'media', required: true }],
     },
   ],

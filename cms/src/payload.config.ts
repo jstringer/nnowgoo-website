@@ -10,6 +10,10 @@ import { Media } from './collections/Media'
 import { Work } from './collections/Work'
 import { s3Storage } from '@payloadcms/storage-s3'
 
+// On Windows, sharp's file cache keeps the temp upload file locked, so Payload's
+// rewrite of it fails with "UNKNOWN: unknown error, open ...payload-client-upload-...".
+sharp.cache(false)
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -54,12 +58,22 @@ export default buildConfig({
     },
   }),
   sharp,
+  // Payload's multipart parser rejects uploads over its default cap (~20MB).
+  upload: {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  },
   plugins: [
     // Neon Object Storage (S3-compatible). Enabled only when configured, so
     // local dev can fall back to disk (cms/media/) by leaving the vars empty.
     s3Storage({
       enabled: Boolean(neonEndpoint && neonBucket),
       bucket: neonBucket || '',
+      // The browser PUTs files straight to the bucket via a presigned URL
+      // instead of streaming them through Payload, so large uploads aren't
+      // subject to Vercel's ~4.5MB request body limit.
+      clientUploads: true,
       collections: {
         media: {
           disablePayloadAccessControl: true,
