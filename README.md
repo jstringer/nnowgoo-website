@@ -1,6 +1,6 @@
 # Portfolio
 
-Personal portfolio for Jack Stringer: Creative Technologist, software engineer and live-event AV professional.
+Personal website and portfolio.
 
 The repo is a monorepo with two independently deployed apps and no root `package.json`. Each app has its own dependencies and lockfile, so run commands inside the app's directory.
 

@@ -1,8 +1,8 @@
 ---
-import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagList from '../../components/TagList.astro';
-import { getAllWork, isVideo, mediaUrl, type Work } from '../../lib/payload';
+import WorkMedia from '../../components/WorkMedia.astro';
+import { getAllWork, type Work } from '../../lib/payload';
 
 export async function getStaticPaths() {
   const all = await getAllWork();
@@ -22,11 +22,26 @@ const dateLabel = new Intl.DateTimeFormat('en-US', {
 }).format(new Date(work.date));
 
 const tags = (work.stack ?? []).map(t => t.name);
-const gallery = (work.gallery ?? []).map(g => g.image);
-const lastIsOdd = gallery.length % 2 === 1;
+
+// Rows with neither text nor media are skipped.
+const rows = (work.rows ?? [])
+  .map(r => ({
+    text: r.text?.trim() || null,
+    side: r.textSide === 'right' ? 'right' : 'left',
+    media: r.media ?? [],
+  }))
+  .filter(r => r.text || r.media.length > 0);
+
+// Legacy gallery, rendered below the rows until it's moved into Rows.
+const gallery = (work.gallery ?? []).map(g => ({
+  item: g.image,
+  full: g.layout === 'full',
+}));
+
+const description = (work.overview || rows.find(r => r.text)?.text || '').slice(0, 200);
 ---
 
-<BaseLayout title={work.title} description={work.overview}>
+<BaseLayout title={work.title} description={description}>
   <a href="/" class="back">&lt; back</a>
 
   <header class="head">
@@ -38,43 +53,57 @@ const lastIsOdd = gallery.length % 2 === 1;
   </header>
 
   <div class="meta">
-    <section>
-      <h2 class="label">Overview</h2>
-      <p>{work.overview}</p>
-    </section>
+    {work.overview && (
+      <section>
+        <h2 class="label">Overview</h2>
+        <p class="text">{work.overview}</p>
+      </section>
+    )}
     <section>
       <h2 class="label">Stack</h2>
       <TagList tags={tags} />
     </section>
   </div>
 
-  <div class="gallery">
-    {gallery.map((item, i) => {
-      const full = lastIsOdd && i === gallery.length - 1;
+  <div class="rows">
+    {rows.map(row => {
+      const both = row.text && row.media.length > 0;
+      const mediaOnly = !row.text;
+      const cols = Math.max(row.media.length, 1);
+      const sizes = mediaOnly
+        ? `(min-width: 720px) ${Math.round(100 / cols)}vw, 100vw`
+        : '(min-width: 720px) 50vw, 100vw';
       return (
-        <div class:list={['gallery__item', { full }]}>
-          {isVideo(item) ? (
-            <video
-              src={`${mediaUrl(item)}#t=0.001`}
-              aria-label={item.alt}
-              controls
-              playsinline
-              preload="metadata"
-            />
-          ) : (
-            <Image
-              src={mediaUrl(item)}
-              alt={item.alt}
-              inferSize
-              widths={[400, 800, 1200, 1600]}
-              sizes="(min-width: 720px) 50vw, 100vw"
-              loading="lazy"
-            />
+        <div
+          class:list={['row', { 'row--media': mediaOnly }]}
+          style={mediaOnly ? `--cols: ${cols}` : undefined}
+        >
+          {row.text && (
+            <p class:list={['text', 'row__text', `row__text--${row.side}`]}>{row.text}</p>
+          )}
+          {row.media.length > 0 && (
+            <div class:list={['row__media', { 'row__media--split': mediaOnly }]}>
+              {row.media.map(item => (
+                <div class="media">
+                  <WorkMedia item={item} sizes={sizes} />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       );
     })}
   </div>
+
+  {gallery.length > 0 && (
+    <div class="gallery">
+      {gallery.map(({ item, full }) => (
+        <div class:list={['gallery__item', { full }]}>
+          <WorkMedia item={item} sizes={full ? '100vw' : '(min-width: 720px) 50vw, 100vw'} />
+        </div>
+      ))}
+    </div>
+  )}
 </BaseLayout>
 
 <style>
@@ -120,15 +149,63 @@ const lastIsOdd = gallery.length % 2 === 1;
     text-transform: uppercase;
   }
 
-  .meta p {
+  /* Text fields are plain textareas: keep their line and paragraph breaks. */
+  .text {
     font-size: 0.875rem;
     max-width: 60ch;
+    white-space: pre-wrap;
+  }
+
+  .rows {
+    display: grid;
+    gap: var(--gap-lg) var(--grid-gap);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--grid-gap);
+    align-items: start;
+  }
+
+  /* Text sits in its half; media takes the other. Text-only rows leave the
+     other half empty. */
+  @media (min-width: 721px) {
+    .row__text--left,
+    .row__text--right ~ .row__media {
+      grid-column: 1;
+    }
+
+    .row__text--right,
+    .row__text--left ~ .row__media {
+      grid-column: 2;
+    }
+  }
+
+  .row__media {
+    display: grid;
+    gap: var(--grid-gap);
+  }
+
+  /* No text: media items share the full width. */
+  .row--media {
+    grid-template-columns: 1fr;
+  }
+
+  .row__media--split {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(var(--cols), 1fr);
+  }
+
+  .media {
+    background: #5e5e5e;
   }
 
   .gallery {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--grid-gap);
+    margin-top: var(--gap-lg);
   }
 
   .gallery__item {
@@ -139,25 +216,14 @@ const lastIsOdd = gallery.length % 2 === 1;
     grid-column: 1 / -1;
   }
 
-  .gallery__item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  /* Letterbox instead of cropping so portrait and landscape clips stay whole
-     and the controls are never cut off. */
-  .gallery__item video {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: var(--bg);
-  }
-
   @media (max-width: 720px) {
     .meta,
+    .row,
     .gallery {
+      grid-template-columns: 1fr;
+    }
+
+    .row__media--split {
       grid-template-columns: 1fr;
     }
 

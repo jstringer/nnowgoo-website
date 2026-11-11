@@ -181,20 +181,44 @@ export interface Work {
   slug: string;
   client: string;
   date: string;
-  overview: string;
+  /**
+   * Legacy. Move this into Rows. If set, it still renders above the rows and is used as the page description.
+   */
+  overview?: string | null;
   stack?:
     | {
         name: string;
         id?: string | null;
       }[]
     | null;
+  /**
+   * The page body, top to bottom. A row can be text, media, or both. Text and media each take half the width; media-only rows split the full width between their items.
+   */
+  rows?:
+    | {
+        /**
+         * Line and paragraph breaks are kept.
+         */
+        text?: string | null;
+        /**
+         * Which half the text sits in. Media goes in the other half.
+         */
+        textSide?: ('left' | 'right') | null;
+        /**
+         * Images or videos, in display order.
+         */
+        media?: (number | Media)[] | null;
+        id?: string | null;
+      }[]
+    | null;
   thumbnail: number | Media;
   /**
-   * Images or videos. Videos play inline with controls.
+   * Legacy. Move this into Rows. If set, it still renders below the rows. Column items sit two per row; full width items get a row to themselves.
    */
   gallery?:
     | {
         image: number | Media;
+        layout: 'column' | 'full';
         id?: string | null;
       }[]
     | null;
@@ -338,11 +362,20 @@ export interface WorkSelect<T extends boolean = true> {
         name?: T;
         id?: T;
       };
+  rows?:
+    | T
+    | {
+        text?: T;
+        textSide?: T;
+        media?: T;
+        id?: T;
+      };
   thumbnail?: T;
   gallery?:
     | T
     | {
         image?: T;
+        layout?: T;
         id?: T;
       };
   updatedAt?: T;

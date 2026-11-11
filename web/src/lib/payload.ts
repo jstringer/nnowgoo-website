@@ -22,10 +22,11 @@ export interface Work {
   slug: string;
   client: string;
   date: string;
-  overview: string;
+  overview?: string | null;
   stack?: { name: string }[] | null;
+  rows?: { text?: string | null; textSide?: 'left' | 'right' | null; media?: Media[] | null }[] | null;
   thumbnail: Media;
-  gallery?: { image: Media }[] | null;
+  gallery?: { image: Media; layout?: 'column' | 'full' | null }[] | null;
 }
 
 // Local disk storage returns relative URLs; Neon Object Storage returns

@@ -94,13 +94,45 @@ export const Work: CollectionConfig = {
     {
       name: 'overview',
       type: 'textarea',
-      required: true,
+      admin: {
+        description:
+          'Legacy. Move this into Rows. If set, it still renders above the rows and is used as the page description.',
+      },
     },
     {
       name: 'stack',
       type: 'array',
       labels: { singular: 'Tool', plural: 'Stack' },
       fields: [{ name: 'name', type: 'text', required: true }],
+    },
+    {
+      name: 'rows',
+      type: 'array',
+      labels: { singular: 'Row', plural: 'Rows' },
+      admin: {
+        description:
+          'The page body, top to bottom. A row can be text, media, or both. Text and media each take half the width; media-only rows split the full width between their items.',
+      },
+      fields: [
+        { name: 'text', type: 'textarea', admin: { description: 'Line and paragraph breaks are kept.' } },
+        {
+          name: 'textSide',
+          type: 'select',
+          defaultValue: 'left',
+          options: [
+            { label: 'Left', value: 'left' },
+            { label: 'Right', value: 'right' },
+          ],
+          admin: { description: 'Which half the text sits in. Media goes in the other half.' },
+        },
+        {
+          name: 'media',
+          type: 'upload',
+          relationTo: 'media',
+          hasMany: true,
+          admin: { description: 'Images or videos, in display order.' },
+        },
+      ],
     },
     {
       name: 'thumbnail',
@@ -114,10 +146,23 @@ export const Work: CollectionConfig = {
       name: 'gallery',
       type: 'array',
       admin: {
-        description: 'Images or videos. Videos play inline with controls.',
+        description:
+          'Legacy. Move this into Rows. If set, it still renders below the rows. Column items sit two per row; full width items get a row to themselves.',
       },
-      // `image` holds either kind of media (name kept to avoid a DB migration).
-      fields: [{ name: 'image', type: 'upload', relationTo: 'media', required: true }],
+      fields: [
+        // Holds either kind of media (name kept to avoid a DB migration).
+        { name: 'image', type: 'upload', relationTo: 'media', required: true },
+        {
+          name: 'layout',
+          type: 'select',
+          required: true,
+          defaultValue: 'column',
+          options: [
+            { label: 'Column (half width)', value: 'column' },
+            { label: 'Full width', value: 'full' },
+          ],
+        },
+      ],
     },
   ],
   hooks: {
