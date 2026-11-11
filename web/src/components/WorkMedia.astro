@@ -1,0 +1,49 @@
+---
+import { Image } from 'astro:assets';
+import { isVideo, mediaUrl, type Media } from '../lib/payload';
+
+interface Props {
+  item: Media;
+  sizes: string;
+}
+
+const { item, sizes } = Astro.props;
+---
+
+{isVideo(item) ? (
+  <video
+    src={`${mediaUrl(item)}#t=0.001`}
+    aria-label={item.alt}
+    controls
+    playsinline
+    preload="metadata"
+  />
+) : (
+  <Image
+    src={mediaUrl(item)}
+    alt={item.alt}
+    inferSize
+    widths={[400, 800, 1200, 1600]}
+    sizes={sizes}
+    loading="lazy"
+  />
+)}
+
+<style>
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Letterbox instead of cropping so portrait and landscape clips stay whole
+     and the controls are never cut off. */
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--bg);
+  }
+</style>
