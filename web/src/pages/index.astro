@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import WorkGrid from '../components/WorkGrid.astro';
+import HeroCanvas from '../components/HeroCanvas.tsx';
 import { getAllWork, mediaUrl } from '../lib/payload';
 
 const items = (await getAllWork()).map(work => ({
@@ -12,6 +13,9 @@ const items = (await getAllWork()).map(work => ({
 ---
 
 <BaseLayout title="Home">
+  <div class="hero-bg" aria-hidden="true">
+    <HeroCanvas client:only="react" />
+  </div>
   <SiteHeader />
   <section class="work">
     <h2 class="section-label">Work</h2>
@@ -20,6 +24,13 @@ const items = (await getAllWork()).map(work => ({
 </BaseLayout>
 
 <style>
+  .hero-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
   .work {
     margin-top: var(--gap-xl);
     display: grid;

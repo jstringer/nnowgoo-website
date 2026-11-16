@@ -7,6 +7,17 @@ const slugify = (input: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
+// Admin conditions for the row layout fields, so each only shows when it can
+// have an effect. Hidden fields keep their saved values.
+type RowSibling =
+  | { text?: string | null; media?: unknown[] | null; textAlign?: string | null }
+  | undefined
+const mediaCount = (s: RowSibling) => (Array.isArray(s?.media) ? s.media.length : 0)
+const hasText = (_: unknown, s: RowSibling) => Boolean(s?.text?.trim())
+const hasMedia = (_: unknown, s: RowSibling) => mediaCount(s) > 0
+const hasManyMedia = (_: unknown, s: RowSibling) => mediaCount(s) > 1
+const hasTextAndMedia = (d: unknown, s: RowSibling) => hasText(d, s) && hasMedia(d, s)
+
 // Ask Vercel to rebuild the static Astro site. A failed call must never block
 // saving in the admin, so errors are logged and swallowed.
 const triggerRebuild = async (req: { payload: { logger: { error: (msg: string) => void } } }) => {
@@ -124,6 +135,151 @@ export const Work: CollectionConfig = {
             { label: 'Right', value: 'right' },
           ],
           admin: { description: 'Which half the text sits in. Media goes in the other half.' },
+        },
+        {
+          name: 'rowAlign',
+          type: 'select',
+          defaultValue: 'aligned',
+          options: [
+            { label: 'Aligned', value: 'aligned' },
+            { label: 'Staggered', value: 'staggered' },
+          ],
+          admin: {
+            description:
+              'Aligned: text and media sit side by side, tops level. Staggered: diagonal, with the media one line below the text on the opposite side. Only affects rows with both text and media, on wider screens. Ignored when Overlap text or Full-bleed media is on.',
+          },
+        },
+        {
+          // Purely visual grouping: fields inside stay flat on the row.
+          type: 'collapsible',
+          label: 'More layout options',
+          admin: { initCollapsed: true },
+          fields: [
+            {
+              name: 'textAlign',
+              type: 'select',
+              defaultValue: 'left',
+              options: [
+                { label: 'Left', value: 'left' },
+                { label: 'Center', value: 'center' },
+                { label: 'Right', value: 'right' },
+                { label: 'Fill column', value: 'fill' },
+              ],
+              admin: {
+                description:
+                  'How the lines of text are justified. Fill column: lines are left-aligned and the text spans its whole column instead of the usual readable width (Text position is then ignored).',
+                condition: hasText,
+              },
+            },
+            {
+              name: 'textPosition',
+              type: 'select',
+              defaultValue: 'left',
+              options: [
+                { label: 'Left', value: 'left' },
+                { label: 'Center', value: 'center' },
+                { label: 'Right', value: 'right' },
+              ],
+              admin: {
+                description: 'Where the text block sits horizontally inside its half. Wider screens only.',
+                // Fill column stretches the block, so there is nothing to position.
+                condition: (d, s) => hasText(d, s) && s?.textAlign !== 'fill',
+              },
+            },
+            {
+              name: 'textVAlign',
+              type: 'select',
+              defaultValue: 'top',
+              options: [
+                { label: 'Top', value: 'top' },
+                { label: 'Center', value: 'center' },
+                { label: 'Bottom', value: 'bottom' },
+              ],
+              admin: {
+                description: 'Where the text sits vertically beside the media. Wider screens only.',
+                condition: hasTextAndMedia,
+              },
+            },
+            {
+              name: 'mediaWidth',
+              type: 'select',
+              defaultValue: 'half',
+              options: [
+                { label: 'One third', value: 'third' },
+                { label: 'Half', value: 'half' },
+                { label: 'Two thirds', value: 'twoThirds' },
+              ],
+              admin: {
+                description: 'How much of the row the media takes; text gets the rest.',
+                condition: hasTextAndMedia,
+              },
+            },
+            {
+              name: 'textOverlap',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Overlap text',
+              admin: {
+                description:
+                  'Text sits on top of the media in a bordered card, and the media spans the full row. Wider screens only.',
+                condition: hasTextAndMedia,
+              },
+            },
+            {
+              name: 'fullBleed',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Full-bleed media',
+              admin: {
+                description:
+                  'Media runs edge to edge, past the page margins. With text, the text drops below it (or overlaps it, if Overlap text is on).',
+                condition: hasMedia,
+              },
+            },
+            {
+              name: 'mediaArrange',
+              type: 'select',
+              defaultValue: 'auto',
+              options: [
+                { label: 'Auto', value: 'auto' },
+                { label: 'Side by side', value: 'side' },
+                { label: 'Stacked', value: 'stack' },
+                { label: 'Offset columns', value: 'offset' },
+              ],
+              admin: {
+                description:
+                  'How several media items sit together. Auto: side by side in media-only rows, stacked beside text. Offset: side by side with every other item dropped down.',
+                condition: hasManyMedia,
+              },
+            },
+            {
+              name: 'mediaRatio',
+              type: 'select',
+              defaultValue: 'native',
+              options: [
+                { label: 'Native (no crop)', value: 'native' },
+                { label: '16:9', value: '16/9' },
+                { label: '4:3', value: '4/3' },
+                { label: '1:1 (square)', value: '1/1' },
+                { label: '4:5 (portrait)', value: '4/5' },
+              ],
+              admin: {
+                description: 'Crop every item in this row to one shape (videos are cropped too).',
+                condition: hasMedia,
+              },
+            },
+            {
+              name: 'spaceBefore',
+              type: 'select',
+              defaultValue: 'normal',
+              options: [
+                { label: 'Tight', value: 'tight' },
+                { label: 'Normal', value: 'normal' },
+                { label: 'Generous', value: 'generous' },
+              ],
+              admin: { description: 'Gap above this row.' },
+            },
+          ],
         },
         {
           name: 'media',

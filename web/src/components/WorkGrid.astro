@@ -16,22 +16,35 @@ const { items } = Astro.props;
 <style>
   .work-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: var(--gap-md);
     padding: var(--gap-md);
     border: 1px solid var(--border);
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1200px) {
     .work-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(4, 1fr);
     }
   }
 
-  @media (max-width: 560px) {
+  @media (max-width: 900px) {
+    .work-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .work-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--gap-sm);
+      padding: var(--gap-sm);
+    }
+  }
+
+  @media (max-width: 400px) {
     .work-grid {
       grid-template-columns: 1fr;
-      padding: var(--gap-sm);
     }
   }
 </style>

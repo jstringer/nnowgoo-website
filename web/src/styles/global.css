@@ -12,7 +12,6 @@
 
   --font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
-  --max-width: 1500px;
   --gutter: clamp(1.25rem, 2vw, 8.6rem);
 
   --gap-xs: 0.5rem;
@@ -68,13 +67,13 @@ a {
 }
 
 main {
+  position: relative;
+  z-index: 1; /* sits above the Home page's fixed HeroCanvas background */
   width: 100%;
-  max-width: var(--max-width);
   padding: var(--gap-lg) var(--gutter) var(--gap-xl);
 }
 
 .container {
-  max-width: var(--max-width);
   padding-inline: var(--gutter);
 }
 

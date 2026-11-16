@@ -205,6 +205,46 @@ export interface Work {
          */
         textSide?: ('left' | 'right') | null;
         /**
+         * Aligned: text and media sit side by side, tops level. Staggered: diagonal, with the media one line below the text on the opposite side. Only affects rows with both text and media, on wider screens. Ignored when Overlap text or Full-bleed media is on.
+         */
+        rowAlign?: ('aligned' | 'staggered') | null;
+        /**
+         * How the lines of text are justified. Fill column: lines are left-aligned and the text spans its whole column instead of the usual readable width (Text position is then ignored).
+         */
+        textAlign?: ('left' | 'center' | 'right' | 'fill') | null;
+        /**
+         * Where the text block sits horizontally inside its half. Wider screens only.
+         */
+        textPosition?: ('left' | 'center' | 'right') | null;
+        /**
+         * Where the text sits vertically beside the media. Wider screens only.
+         */
+        textVAlign?: ('top' | 'center' | 'bottom') | null;
+        /**
+         * How much of the row the media takes; text gets the rest.
+         */
+        mediaWidth?: ('third' | 'half' | 'twoThirds') | null;
+        /**
+         * Text sits on top of the media in a bordered card, and the media spans the full row. Wider screens only.
+         */
+        textOverlap?: boolean | null;
+        /**
+         * Media runs edge to edge, past the page margins. With text, the text drops below it (or overlaps it, if Overlap text is on).
+         */
+        fullBleed?: boolean | null;
+        /**
+         * How several media items sit together. Auto: side by side in media-only rows, stacked beside text. Offset: side by side with every other item dropped down.
+         */
+        mediaArrange?: ('auto' | 'side' | 'stack' | 'offset') | null;
+        /**
+         * Crop every item in this row to one shape (videos are cropped too).
+         */
+        mediaRatio?: ('native' | '16/9' | '4/3' | '1/1' | '4/5') | null;
+        /**
+         * Gap above this row.
+         */
+        spaceBefore?: ('tight' | 'normal' | 'generous') | null;
+        /**
          * Images or videos, in display order.
          */
         media?: (number | Media)[] | null;
@@ -367,6 +407,16 @@ export interface WorkSelect<T extends boolean = true> {
     | {
         text?: T;
         textSide?: T;
+        rowAlign?: T;
+        textAlign?: T;
+        textPosition?: T;
+        textVAlign?: T;
+        mediaWidth?: T;
+        textOverlap?: T;
+        fullBleed?: T;
+        mediaArrange?: T;
+        mediaRatio?: T;
+        spaceBefore?: T;
         media?: T;
         id?: T;
       };

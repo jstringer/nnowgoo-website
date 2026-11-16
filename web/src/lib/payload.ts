@@ -24,7 +24,21 @@ export interface Work {
   date: string;
   overview?: string | null;
   stack?: { name: string }[] | null;
-  rows?: { text?: string | null; textSide?: 'left' | 'right' | null; media?: Media[] | null }[] | null;
+  rows?: {
+    text?: string | null;
+    textSide?: 'left' | 'right' | null;
+    rowAlign?: 'aligned' | 'staggered' | null;
+    textAlign?: 'left' | 'center' | 'right' | 'fill' | null;
+    textPosition?: 'left' | 'center' | 'right' | null;
+    textVAlign?: 'top' | 'center' | 'bottom' | null;
+    mediaWidth?: 'third' | 'half' | 'twoThirds' | null;
+    textOverlap?: boolean | null;
+    fullBleed?: boolean | null;
+    mediaArrange?: 'auto' | 'side' | 'stack' | 'offset' | null;
+    mediaRatio?: 'native' | '16/9' | '4/3' | '1/1' | '4/5' | null;
+    spaceBefore?: 'tight' | 'normal' | 'generous' | null;
+    media?: Media[] | null;
+  }[] | null;
   thumbnail: Media;
   gallery?: { image: Media; layout?: 'column' | 'full' | null }[] | null;
 }

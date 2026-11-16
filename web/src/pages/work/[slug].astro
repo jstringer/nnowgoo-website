@@ -12,7 +12,13 @@ export async function getStaticPaths() {
   }));
 }
 
-const { work } = Astro.props as { work: Work };
+// In `astro dev`, getStaticPaths props are cached, so CMS edits wouldn't show
+// up on refresh. Re-fetch per request in dev only; `import.meta.env.DEV` is
+// statically false in `astro build`, so production uses the props as usual.
+let { work } = Astro.props as { work: Work };
+if (import.meta.env.DEV) {
+  work = (await getAllWork()).find(w => w.slug === Astro.params.slug) ?? work;
+}
 
 // Stored as a full ISO date; the CMS only picks a month, so format in UTC.
 const dateLabel = new Intl.DateTimeFormat('en-US', {
@@ -23,13 +29,54 @@ const dateLabel = new Intl.DateTimeFormat('en-US', {
 
 const tags = (work.stack ?? []).map(t => t.name);
 
+// CMS enum value -> CSS value. Anything unknown or unset falls back to the
+// first/default entry, so old rows keep rendering as before.
+const MEDIA_SPLIT = { third: [1, 2], half: [1, 1], twoThirds: [2, 1] } as const; // [media, text] fr
+const JUSTIFY = { left: 'start', center: 'center', right: 'end' } as const;
+const VALIGN = { top: 'start', center: 'center', bottom: 'end' } as const;
+const SPACE = { tight: 'var(--gap-md)', normal: 'var(--gap-lg)', generous: 'var(--gap-xl)' } as const;
+const RATIOS = ['16/9', '4/3', '1/1', '4/5'] as const;
+
 // Rows with neither text nor media are skipped.
 const rows = (work.rows ?? [])
-  .map(r => ({
-    text: r.text?.trim() || null,
-    side: r.textSide === 'right' ? 'right' : 'left',
-    media: r.media ?? [],
-  }))
+  .map(r => {
+    const text = r.text?.trim() || null;
+    const media = r.media ?? [];
+    const side = r.textSide === 'right' ? 'right' : 'left';
+    const both = Boolean(text) && media.length > 0;
+    const mediaOnly = !text;
+    const bleed = media.length > 0 && Boolean(r.fullBleed);
+    const overlap = both && Boolean(r.textOverlap);
+    // Overlap and full-bleed take over the layout, so they win over staggered.
+    const staggered = both && r.rowAlign === 'staggered' && !overlap && !bleed;
+    const [mediaFr, textFr] = MEDIA_SPLIT[r.mediaWidth ?? 'half'] ?? MEDIA_SPLIT.half;
+    const arrange =
+      r.mediaArrange && r.mediaArrange !== 'auto' ? r.mediaArrange : mediaOnly ? 'side' : 'stack';
+    const fill = r.textAlign === 'fill';
+    const ratio = RATIOS.find(x => x === r.mediaRatio) ?? null;
+
+    // Rough share of the viewport each image gets, for the srcset `sizes`.
+    const rowShare = mediaOnly || bleed || overlap ? 1 : mediaFr / (mediaFr + textFr);
+    const perLine = arrange === 'stack' ? 1 : Math.max(media.length, 1);
+    const sizes = bleed
+      ? '100vw'
+      : `(min-width: 721px) ${Math.round((100 * rowShare) / perLine)}vw, 100vw`;
+
+    const vars = [
+      `--cols: ${Math.max(media.length, 1)}`,
+      `--row-cols: ${side === 'left' ? `${textFr}fr ${mediaFr}fr` : `${mediaFr}fr ${textFr}fr`}`,
+      // "Fill column": lines stay left-aligned, but the block drops its
+      // readable-width cap and stretches across its column.
+      `--text-align: ${fill ? 'left' : (r.textAlign ?? 'left')}`,
+      `--text-justify: ${fill ? 'stretch' : (JUSTIFY[r.textPosition ?? 'left'] ?? 'start')}`,
+      `--text-max: ${fill ? 'none' : '60ch'}`,
+      `--text-valign: ${VALIGN[r.textVAlign ?? 'top'] ?? 'start'}`,
+      `--row-space: ${SPACE[r.spaceBefore ?? 'normal'] ?? SPACE.normal}`,
+      ratio ? `--ratio: ${ratio}` : null,
+    ].filter(Boolean).join('; ');
+
+    return { text, side, media, mediaOnly, bleed, overlap, staggered, arrange, ratio, sizes, vars };
+  })
   .filter(r => r.text || r.media.length > 0);
 
 // Legacy gallery, rendered below the rows until it's moved into Rows.
@@ -66,33 +113,36 @@ const description = (work.overview || rows.find(r => r.text)?.text || '').slice(
   </div>
 
   <div class="rows">
-    {rows.map(row => {
-      const both = row.text && row.media.length > 0;
-      const mediaOnly = !row.text;
-      const cols = Math.max(row.media.length, 1);
-      const sizes = mediaOnly
-        ? `(min-width: 720px) ${Math.round(100 / cols)}vw, 100vw`
-        : '(min-width: 720px) 50vw, 100vw';
-      return (
-        <div
-          class:list={['row', { 'row--media': mediaOnly }]}
-          style={mediaOnly ? `--cols: ${cols}` : undefined}
-        >
-          {row.text && (
-            <p class:list={['text', 'row__text', `row__text--${row.side}`]}>{row.text}</p>
-          )}
-          {row.media.length > 0 && (
-            <div class:list={['row__media', { 'row__media--split': mediaOnly }]}>
-              {row.media.map(item => (
-                <div class="media">
-                  <WorkMedia item={item} sizes={sizes} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    })}
+    {rows.map(row => (
+      <div
+        class:list={[
+          'row',
+          {
+            'row--media': row.mediaOnly,
+            'row--staggered': row.staggered,
+            'row--overlap': row.overlap,
+            'row--bleed': row.bleed,
+            'row--ratio': row.ratio,
+          },
+        ]}
+        style={row.vars}
+      >
+        {row.text && (
+          <p class:list={['text', 'row__text', `row__text--${row.side}`]}>{row.text}</p>
+        )}
+        {row.media.length > 0 && (
+          <div
+            class:list={['row__media', `row__media--${row.arrange}`, { 'row__media--wide': row.mediaOnly }]}
+          >
+            {row.media.map(item => (
+              <div class="media">
+                <WorkMedia item={item} sizes={row.sizes} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
   </div>
 
   {gallery.length > 0 && (
@@ -152,25 +202,45 @@ const description = (work.overview || rows.find(r => r.text)?.text || '').slice(
   /* Text fields are plain textareas: keep their line and paragraph breaks. */
   .text {
     font-size: 0.875rem;
-    max-width: 60ch;
+    max-width: var(--text-max, 60ch);
     white-space: pre-wrap;
+    text-align: var(--text-align, left);
   }
 
+  /* Each row sets its own layout through inline custom properties (see the
+     rows mapping in the frontmatter): --row-cols, --row-space, --text-align,
+     --text-justify, --text-valign, --cols, --ratio. */
   .rows {
     display: grid;
-    gap: var(--gap-lg) var(--grid-gap);
   }
 
   .row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: var(--row-cols, 1fr 1fr);
     gap: var(--grid-gap);
     align-items: start;
+    margin-top: var(--row-space, var(--gap-lg));
   }
 
-  /* Text sits in its half; media takes the other. Text-only rows leave the
-     other half empty. */
+  .row:first-child {
+    margin-top: 0;
+  }
+
+  /* Text sits in one column; media takes the other. Text-only rows leave the
+     other column empty. */
   @media (min-width: 721px) {
+    /* Pin both to row 1. Without this, a media item placed in a column
+       behind the text's column gets pushed to an implicit second row. */
+    .row__text,
+    .row__media {
+      grid-row: 1;
+    }
+
+    .row__text {
+      align-self: var(--text-valign, start);
+      justify-self: var(--text-justify, start);
+    }
+
     .row__text--left,
     .row__text--right ~ .row__media {
       grid-column: 1;
@@ -180,11 +250,47 @@ const description = (work.overview || rows.find(r => r.text)?.text || '').slice(
     .row__text--left ~ .row__media {
       grid-column: 2;
     }
+
+    /* The layout variants below use `.row.row--x` so they beat the sibling
+       column rules above regardless of source order. */
+
+    /* Staggered: media drops one line, diagonal from the text. */
+    .row.row--staggered .row__media {
+      grid-row: 2;
+    }
+
+    /* Full-bleed: media spans the whole row; any text drops below it. */
+    .row.row--bleed .row__media {
+      grid-column: 1 / -1;
+    }
+
+    .row.row--bleed:not(.row--overlap) .row__text {
+      grid-row: 2;
+    }
+
+    /* Overlap: media spans the row, text is a bordered card on top of it. */
+    .row.row--overlap .row__media {
+      grid-column: 1 / -1;
+    }
+
+    .row.row--overlap .row__text {
+      z-index: 1;
+      margin: var(--gap-md);
+      padding: var(--gap-sm);
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+  }
+
+  /* Edge to edge: cancel the page gutter (main's side padding). */
+  .row--bleed .row__media {
+    margin-inline: calc(var(--gutter) * -1);
   }
 
   .row__media {
     display: grid;
     gap: var(--grid-gap);
+    align-items: start;
   }
 
   /* No text: media items share the full width. */
@@ -192,13 +298,36 @@ const description = (work.overview || rows.find(r => r.text)?.text || '').slice(
     grid-template-columns: 1fr;
   }
 
-  .row__media--split {
+  .row__media--wide {
     grid-column: 1 / -1;
-    grid-template-columns: repeat(var(--cols), 1fr);
+  }
+
+  /* Several items: `stack` is the default single column; `side` and `offset`
+     put them in a line, `offset` dropping every other one. */
+  .row__media--side,
+  .row__media--offset {
+    grid-template-columns: repeat(var(--cols, 1), 1fr);
+  }
+
+  .row__media--offset .media:nth-child(even) {
+    margin-top: var(--gap-md);
   }
 
   .media {
     background: #5e5e5e;
+  }
+
+  /* Forced crop for the whole row. Videos are cropped too, unlike the
+     letterboxing they get everywhere else. */
+  .row--ratio .media {
+    aspect-ratio: var(--ratio);
+  }
+
+  .row--ratio .media :global(img),
+  .row--ratio .media :global(video) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .gallery {
@@ -223,8 +352,13 @@ const description = (work.overview || rows.find(r => r.text)?.text || '').slice(
       grid-template-columns: 1fr;
     }
 
-    .row__media--split {
+    .row__media--side,
+    .row__media--offset {
       grid-template-columns: 1fr;
+    }
+
+    .row__media--offset .media:nth-child(even) {
+      margin-top: 0;
     }
 
     .gallery__item.full {
